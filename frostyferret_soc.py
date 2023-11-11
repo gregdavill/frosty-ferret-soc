@@ -122,17 +122,15 @@ def main():
     ##### setup the builder and run it
     builder = Builder(soc, output_dir="build",
         csr_csv="build/csr.csv", csr_svd="build/software/soc.svd",
-        compile_software=True, compile_gateware=True)
+        compile_software=args.build, compile_gateware=args.build)
     #builder.software_packages=[] # necessary to bypass Meson dependency checks required by Litex libc
 
 
-    if args.build:
-        vns = builder.build()
-        
-        ##### post-build routines
-        soc.do_exit(vns)
-        lxsocdoc.generate_docs(soc, "build/documentation", note_pulses=True, quiet=True)
-        os.system("sphinx-build -M html build/documentation/ build/documentation/_build")
+    vns = builder.build()
+    
+    soc.do_exit(vns)
+    lxsocdoc.generate_docs(soc, "build/documentation", note_pulses=True, quiet=True)
+    os.system("sphinx-build -M html build/documentation/ build/documentation/_build")
         
     
     if args.load:
