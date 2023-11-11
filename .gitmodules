@@ -1,0 +1,18 @@
+[submodule "deps/litex"]
+	path = deps/litex
+	url = https://github.com/enjoy-digital/litex.git
+[submodule "deps/migen"]
+	path = deps/migen
+	url = https://github.com/m-labs/migen.git
+[submodule "deps/pythondata-cpu-vexriscv"]
+	path = deps/pythondata-cpu-vexriscv
+	url = https://github.com/litex-hub/pythondata-cpu-vexriscv.git
+[submodule "deps/pythondata-software-picolibc"]
+	path = deps/pythondata-software-picolibc
+	url = https://github.com/litex-hub/pythondata-software-picolibc
+[submodule "deps/pythondata-software-compiler_rt"]
+	path = deps/pythondata-software-compiler_rt
+	url = https://github.com/litex-hub/pythondata-software-compiler_rt
+[submodule "deps/sphinx-wavedrom"]
+	path = deps/sphinx-wavedrom
+	url = https://github.com/bavovanachte/sphinx-wavedrom.git
