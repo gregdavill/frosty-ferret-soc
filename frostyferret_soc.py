@@ -36,9 +36,12 @@ from litex.soc.integration.doc import AutoDoc, ModuleDoc
 
 from litex.soc.integration.soc import SoCRegion
 
-from rtl.platform.icebreaker_ppp import CRG, Platform
+from rtl.platform.icebreaker_ppp import Platform as FPGAPlatform
+from rtl.platform.sim import Platform as SimPlatform
 
 from litex.soc.cores.led import LedChaser
+from litespi.modules import W25Q32
+from litespi.opcodes import SpiNorFlashOpCodes as Codes
 
 # System constants ---------------------------------------------------------------------------------
 
@@ -62,16 +65,16 @@ class FrostyFerretSoc(SoCCore):
     def __init__(self, platform, sys_clk_freq=int(48e6),
                  **kwargs):
 
-        reset_address = self.mem_map["rom"]+boot_offset
-        bios_size = 0
+        reset_address = self.mem_map["spiflash"]
         
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, sys_clk_freq, csr_data_width=32,
-            integrated_rom_size  = 2048,
+            integrated_rom_size  = 0,
             integrated_rom_init  = None, # bios_path,
             integrated_sram_size = 2048, # Use external SRAM for boot code
             ident                = "",
             cpu_type             = "vexriscv",
+            cpu_variant          = "lite",
             csr_paging           = 4096,  # increase paging to 1 page size
             csr_address_width    = 16,    # increase to accommodate larger page size
             with_uart            = False, # implemented manually to allow for UART mux
@@ -93,6 +96,8 @@ class FrostyFerretSoc(SoCCore):
             'gpio': 3,
             # 'uart_phy': 4,
             'uart': 5,
+            'spiflash_core': 6,
+            'spiflash_phy': 7,
         }
 
         self.irq.locs = {
@@ -100,27 +105,31 @@ class FrostyFerretSoc(SoCCore):
             'gpio': 1,
         }
 
-        self.submodules.crg = CRG(platform, sys_clk_freq)
+        self.submodules.crg = platform.crg(platform, sys_clk_freq)
 
         self.leds = LedChaser(
             pads         = platform.request_all("user_led"),
             sys_clk_freq = sys_clk_freq)
 
-        from litespi.modules import W25Q128JV
-        from litespi.opcodes import SpiNorFlashOpCodes as Codes
-        self.add_spi_flash(mode="4x", module=W25Q128JV(Codes.READ_1_1_4), with_master=False)
+        self.add_spi_flash(mode="4x", module=W25Q32(Codes.READ_1_1_1), with_master=True)
 
 # Build --------------------------------------------------------------------------------------------
 
 def main():
     from litex.build.parser import LiteXArgumentParser
-    parser = LiteXArgumentParser(platform=Platform, description="LiteX SoC")
+    parser = LiteXArgumentParser(platform=FPGAPlatform, description="LiteX SoC")
     parser.add_target_argument("--flash",               action="store_true",      help="Flash Bitstream and BIOS.")
+    parser.add_target_argument("--sim",               action="store_true",      help="Flash Bitstream and BIOS.")
     args = parser.parse_args()
+
+    if args.sim:
+        platform = SimPlatform()
+    else:
+        platform = FPGAPlatform()
 
     ##### define the soc
     soc = FrostyFerretSoc(
-        Platform(),
+        platform,
     )
 
     ##### setup the builder and run it
@@ -129,9 +138,11 @@ def main():
         compile_software=args.build, compile_gateware=args.build)
     #builder.software_packages=[] # necessary to bypass Meson dependency checks required by Litex libc
 
-
-    vns = builder.build()
+    if args.sim:
+        vns = builder.build(run=False)
+        return 0
     
+    vns = builder.build()
     soc.do_exit(vns)
     lxsocdoc.generate_docs(soc, "build/documentation", note_pulses=True, quiet=True)
     os.system("sphinx-build -M html build/documentation/ build/documentation/_build")

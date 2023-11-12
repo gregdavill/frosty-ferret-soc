@@ -73,6 +73,7 @@ class CRG(Module, AutoCSR):
 class Platform(LatticeECP5Platform):
     default_clk_name   = "clk48"
     default_clk_period = 1e9/48e6
+    crg = CRG
 
     def __init__(self, device="12F", toolchain="trellis", **kwargs):
         assert device in ["12F", "25F", "45F", "85F"]
