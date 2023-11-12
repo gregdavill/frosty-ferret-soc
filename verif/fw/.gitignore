@@ -1,0 +1,6 @@
+#Firmware targets
+*.bin
+*.elf
+*.disasm
+*.o
+*.cde

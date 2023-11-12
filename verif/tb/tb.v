@@ -1,30 +1,34 @@
+//
+// This file is part of frosty-ferret-soc
+//
+// Copyright (c) 2023 Greg Davill <greg.davill@gmail.com>
+// SPDX-License-Identifier: BSD-2-Clause
+
 `timescale 100ps / 100ps
 
 module tb (
-    output clk,
+    input clk,
     input reset,
     input [4095:0] test_name
 );
 
-
   wire spi0_clk;
-  wire _spi0_clk;
   wire [3:0] spi0_dq;
   wire spi0_rwds;
   wire spi0_cs_n;
 
+  wire wfi;
+  wire [31:0] a0;
 
   dut dut (
       .clk(clk),
       .reset(reset),
-      .spiflash4x_clk(_spi0_clk),
+      .spiflash4x_clk(spi0_clk),
       .spiflash4x_cs_n(spi0_cs_n),
       .spiflash4x_dq(spi0_dq)
   );
 
-  assign #15 spi0_clk = _spi0_clk;
-
-  W25Q32JVxxIM FLASH (
+  W25Q32JVxxIM flash (
       .CSn(spi0_cs_n),
       .CLK(spi0_clk),
       .DIO(spi0_dq[0]),
@@ -40,11 +44,9 @@ module tb (
     $dumpvars(0, tb);
   end
 
-  initial begin
-    repeat (5000) @(posedge clk);
-    $error("Simulation Timeout");
-    $finish();
-  end
+  // Extract wfi and a0
+  assign wfi = dut.VexRiscv.lastStageInstruction == 32'h10500073;
+  assign a0 = dut.VexRiscv.RegFilePlugin_regFile[10];
 
 
 endmodule

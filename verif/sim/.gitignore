@@ -1,0 +1,7 @@
+sim_build/
+*.csv
+*.init
+*.vcd
+*.TXT
+results.xml
+dut.v
