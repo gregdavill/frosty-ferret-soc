@@ -1,9 +1,12 @@
-[submodule "deps/litex"]
-	path = deps/litex
-	url = https://github.com/enjoy-digital/litex.git
 [submodule "deps/migen"]
 	path = deps/migen
 	url = https://github.com/m-labs/migen.git
+[submodule "deps/litex"]
+	path = deps/litex
+	url = https://github.com/enjoy-digital/litex.git
+[submodule "deps/litespi"]
+	path = deps/litespi
+	url = https://github.com/litex-hub/litespi.git
 [submodule "deps/pythondata-cpu-vexriscv"]
 	path = deps/pythondata-cpu-vexriscv
 	url = https://github.com/litex-hub/pythondata-cpu-vexriscv.git
@@ -16,3 +19,6 @@
 [submodule "deps/sphinx-wavedrom"]
 	path = deps/sphinx-wavedrom
 	url = https://github.com/bavovanachte/sphinx-wavedrom.git
+[submodule "deps/pythondata-misc-tapcfg"]
+	path = deps/pythondata-misc-tapcfg
+	url = https://github.com/litex-hub/pythondata-misc-tapcfg.git

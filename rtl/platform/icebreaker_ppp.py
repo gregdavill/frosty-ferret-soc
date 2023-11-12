@@ -35,6 +35,14 @@ _io = [
         Subsignal("g", Pins("B14"), IOStandard("LVCMOS33")),
         Subsignal("b", Pins("A15"), IOStandard("LVCMOS33")),
     ),
+
+    # SPIFlash
+    ("spiflash4x", 0,
+        Subsignal("cs_n", Pins("N8")),
+        #Subsignal("clk",  Pins("U3")),
+        Subsignal("dq",   Pins("T8 T7 M7 N7")),
+        IOStandard("LVCMOS33")
+    ),
 ]
 
 # Connectors ---------------------------------------------------------------------------------------
