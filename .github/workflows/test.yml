@@ -1,0 +1,45 @@
+name: tests
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: YosysHQ setup
+      uses: YosysHQ/setup-oss-cad-suite@v1
+      
+    - name: RISC-V GNU setup
+      uses: gregdavill/setup-riscv-gnu-toolchain@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: configure python
+      run: |
+        python3 -m pip install setuptools
+        python3 -m pip install wheel
+        python3 -m pip install Sphinx 
+        python3 -m pip install sphinxcontrib-wavedrom 
+
+    - name: Litex sim build
+      run: |
+        ./frostyferret_soc.py --sim
+
+    - name: Litex fpga build
+      run: |
+        ./frostyferret_soc.py --build
+
+    - name: Firmware build
+      working-directory: fw/asm_blink
+      run: make all blink.cde blink.disasm
+        
+    - name: cocotb-test
+      working-directory: verif/sim
+      run: make
+        
+    
