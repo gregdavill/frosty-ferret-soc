@@ -4,7 +4,7 @@ TOPLEVEL_LANG ?= verilog
 
 PWD=$(shell pwd)
 
-VERILOG_SOURCES=$(PWD)/dut.v $(PWD)/../../deps/pythondata-cpu-vexriscv/pythondata_cpu_vexriscv/verilog/VexRiscv_Lite.v $(PWD)/../tb/tb.v $(PWD)/../rtl/vendor_models/W25Q32JVxxIM.v
+VERILOG_SOURCES=$(PWD)/dut.v $(PWD)/../../blocks/vexriscv/rtl/VexRiscv_Lite_rf.v $(PWD)/../../blocks/DFFRF_2R1W/DFFRF_2R1W.v $(PWD)/../tb/tb.v $(PWD)/../rtl/vendor_models/W25Q32JVxxIM.v
 TOPLEVEL=tb
 MODULE=tests
 

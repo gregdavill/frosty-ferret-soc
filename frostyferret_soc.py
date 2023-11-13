@@ -74,7 +74,7 @@ class FrostyFerretSoc(SoCCore):
             integrated_sram_size = 2048, # Use external SRAM for boot code
             ident                = "",
             cpu_type             = "vexriscv",
-            cpu_variant          = "lite",
+            cpu_variant          = None,
             csr_paging           = 4096,  # increase paging to 1 page size
             csr_address_width    = 16,    # increase to accommodate larger page size
             with_uart            = False, # implemented manually to allow for UART mux
@@ -87,6 +87,9 @@ class FrostyFerretSoc(SoCCore):
         # this helps remove their contribution from the cache tag critical path
         if self.mem_map["rom"] == 0:
             self.mem_map["rom"] += 0x80000000
+
+        self.cpu.use_external_variant("blocks/vexriscv/rtl/VexRiscv_Lite_rf.v")
+        self.platform.add_source("blocks/DFFRF_2R1W/DFFRF_2R1W.v")
 
         # Fix the location of CSRs and IRQs so we can do firmware updates between generations of the SoC
         self.csr.locs = {

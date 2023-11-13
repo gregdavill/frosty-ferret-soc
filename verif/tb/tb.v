@@ -4,6 +4,7 @@
 // Copyright (c) 2023 Greg Davill <greg.davill@gmail.com>
 // SPDX-License-Identifier: BSD-2-Clause
 
+`default_nettype none
 `timescale 100ps / 100ps
 
 module tb (
@@ -46,7 +47,7 @@ module tb (
 
   // Extract wfi and a0
   assign wfi = dut.VexRiscv.lastStageInstruction == 32'h10500073;
-  assign a0 = dut.VexRiscv.RegFilePlugin_regFile[10];
+  assign a0 = dut.VexRiscv.u_rf.regfile[10];
 
 
 endmodule
