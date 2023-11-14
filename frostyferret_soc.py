@@ -36,6 +36,8 @@ from litex.soc.integration.doc import AutoDoc, ModuleDoc
 
 from litex.soc.integration.soc import SoCRegion
 
+
+from rtl.sram import GF180_RAM
 from rtl.platform.icebreaker_ppp import Platform as FPGAPlatform
 from rtl.platform.sim import Platform as SimPlatform
 
@@ -71,7 +73,7 @@ class FrostyFerretSoc(SoCCore):
         SoCCore.__init__(self, platform, sys_clk_freq, csr_data_width=32,
             integrated_rom_size  = 0,
             integrated_rom_init  = None, # bios_path,
-            integrated_sram_size = 2048, # Use external SRAM for boot code
+            integrated_sram_size = 0, # Use external SRAM for boot code
             ident                = "",
             cpu_type             = "vexriscv",
             cpu_variant          = None,
@@ -90,6 +92,16 @@ class FrostyFerretSoc(SoCCore):
 
         self.cpu.use_external_variant("blocks/vexriscv/rtl/VexRiscv_Lite_rf.v")
         self.platform.add_source("blocks/DFFRF_2R1W/DFFRF_2R1W.v")
+
+        #GF180_RAM
+        sram_size = 2 * 1024
+        sram = self.submodules.mem = GF180_RAM(size=sram_size)
+#        self.register_mem("sram", self.mem_map["sram"], self.mem.bus, sram_size)
+        self.bus.add_slave("sram", self.mem.bus, SoCRegion(origin=self.mem_map["sram"], size=sram_size))
+
+        self.platform.add_source("blocks/GF180_RAM/gf180_sram512x8_wrapper.v")
+        self.platform.add_source("blocks/GF180_RAM/gf180mcu_fd_ip_sram__sram512x8m8wm1.v")
+
 
         # Fix the location of CSRs and IRQs so we can do firmware updates between generations of the SoC
         self.csr.locs = {
