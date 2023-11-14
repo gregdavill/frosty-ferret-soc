@@ -99,7 +99,8 @@ class FrostyFerretSoc(SoCCore):
 #        self.register_mem("sram", self.mem_map["sram"], self.mem.bus, sram_size)
         self.bus.add_slave("sram", self.mem.bus, SoCRegion(origin=self.mem_map["sram"], size=sram_size))
 
-        self.platform.add_source("blocks/GF180_RAM/gf180_sram512x8_wrapper.v")
+        self.platform.add_source("blocks/GF180_RAM/GF180_RAM_512x32.v")
+        self.platform.add_source("blocks/GF180_RAM/gf180_ram_512x8_wrapper.v")
         self.platform.add_source("blocks/GF180_RAM/gf180mcu_fd_ip_sram__sram512x8m8wm1.v")
 
 
