@@ -27,7 +27,7 @@ class SoCTestHarness:
         self.timeout_cycles = 50000
 
         self._set_test_name()
-        self._load_csr("csr.csv")
+        self._load_csr("build/csr.csv")
 
         cocotb.start_soon(Clock(dut.clk, 10, "ns").start())
         cocotb.start_soon(self._test_timeout())

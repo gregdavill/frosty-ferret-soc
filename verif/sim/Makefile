@@ -4,7 +4,7 @@ TOPLEVEL_LANG ?= verilog
 
 PWD=$(shell pwd)
 
-VERILOG_SOURCES=$(PWD)/dut.v \
+VERILOG_SOURCES=$(PWD)/build/gateware/dut.v \
 	$(PWD)/../../blocks/vexriscv/rtl/VexRiscv_Lite_rf.v \
 	$(PWD)/../../blocks/GF180_RAM/GF180_RAM_512x32.v \
 	$(PWD)/../../blocks/GF180_RAM/gf180_ram_512x8_wrapper.v \
@@ -14,17 +14,10 @@ VERILOG_SOURCES=$(PWD)/dut.v \
 TOPLEVEL=tb
 MODULE=tests
 
-#	$(PWD)/../../blocks/GF180_RAM/gf180mcu_fd_ip_sram__sram512x8m8wm1.v \
-
-
-CUSTOM_COMPILE_DEPS = $(PWD)/dut.v
-
-export DUT_CSRS=csr.csv
+CUSTOM_COMPILE_DEPS = $(PWD)/build/gateware/dut.v
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: $(PWD)/dut.v
-$(PWD)/dut.v:
-	cp ../../build/gateware/dut.v ./dut.v
-	cp ../../build/csr.csv ./csr.csv
-	cp ../../build/gateware/*.init .
+.PHONY: $(PWD)/build/gateware/dut.v
+$(PWD)/build/gateware/dut.v:
+	../../frostyferret_soc.py --sim
