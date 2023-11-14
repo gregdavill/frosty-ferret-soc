@@ -22,3 +22,6 @@
 [submodule "deps/pythondata-misc-tapcfg"]
 	path = deps/pythondata-misc-tapcfg
 	url = https://github.com/litex-hub/pythondata-misc-tapcfg.git
+[submodule "deps/sphinx-verilog-domain"]
+	path = deps/sphinx-verilog-domain
+	url = https://github.com/SymbiFlow/sphinx-verilog-domain.git
