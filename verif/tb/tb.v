@@ -46,7 +46,8 @@ module tb (
   end
 
   // Extract wfi and a0
-  assign wfi = dut.VexRiscv.lastStageInstruction == 32'h10500073;
+  assign wfi =   (dut.VexRiscv.lastStageInstruction == 32'h10500073) 
+              && (dut.VexRiscv.lastStageIsValid);
   assign a0 = dut.VexRiscv.u_rf.regfile[10];
 
 

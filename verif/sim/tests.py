@@ -99,7 +99,7 @@ class SoCTestHarness:
         Args:
             firmware_name (str): Firmware name to build
         """
-        os.system(f"make -C ../fw/{firmware_name} {firmware_name}.bin")
+        os.system(f"make -C ../fw/{firmware_name} all")
 
     def init_spiflash(self, firmware_name: str):
         with open(f"../fw/{firmware_name}/{firmware_name}.bin", "rb") as f:
