@@ -18,6 +18,13 @@ module tb (
   wire spi0_rwds;
   wire spi0_cs_n;
 
+  wire hyperbus0_clk_p;
+  wire hyperbus0_clk_n;
+  wire hyperbus0_cs_n;
+  wire [7:0] hyperbus0_dq;
+  wire hyperbus0_reset_n;
+  wire hyperbus0_rwds;
+
   wire wfi;
   wire [31:0] a0;
 
@@ -26,7 +33,13 @@ module tb (
       .reset(reset),
       .spiflash4x_clk(spi0_clk),
       .spiflash4x_cs_n(spi0_cs_n),
-      .spiflash4x_dq(spi0_dq)
+      .spiflash4x_dq(spi0_dq),
+      .hyperbus0_clk_p(hyperbus0_clk_p),
+      .hyperbus0_clk_n(hyperbus0_clk_n),
+      .hyperbus0_cs_n(hyperbus0_cs_n),
+      .hyperbus0_dq(hyperbus0_dq),
+      .hyperbus0_reset_n(hyperbus0_reset_n),
+      .hyperbus0_rwds(hyperbus0_rwds)
   );
 
   W25Q32JVxxIM flash (
@@ -38,6 +51,22 @@ module tb (
       .HOLDn(spi0_dq[3]),
       .RESETn(~reset)
   );
+
+s27ks0641 hyerram (
+    .DQ7(hyperbus0_dq[7]),
+    .DQ6(hyperbus0_dq[6]),
+    .DQ5(hyperbus0_dq[5]),
+    .DQ4(hyperbus0_dq[4]),
+    .DQ3(hyperbus0_dq[3]),
+    .DQ2(hyperbus0_dq[2]),
+    .DQ1(hyperbus0_dq[1]),
+    .DQ0(hyperbus0_dq[0]),
+    .RWDS(hyperbus0_rwds),
+    .CSNeg(hyperbus0_cs_n),
+    .CK(hyperbus0_clk_p),
+    .CKNeg(hyperbus0_clk_n),
+    .RESETNeg(hyperbus0_reset_n)
+);
 
   // Dump waves
   initial begin

@@ -51,7 +51,7 @@ class SoCTestHarness:
         import inspect
 
         tn = cocotb.binary.BinaryValue(value=None, n_bits=4096)
-        tn.buff = bytes(inspect.stack()[1][3], encoding="ascii")
+        tn.buff = bytes(inspect.stack()[2][3], encoding="ascii")
         self.dut.test_name.value = tn
 
     @cocotb.coroutine
@@ -92,6 +92,7 @@ class SoCTestHarness:
         yield RisingEdge(self.dut.clk)
         self.dut.reset.value = 0
         yield RisingEdge(self.dut.clk)
+        yield RisingEdge(self.dut.clk)
 
     def build_fw(self, firmware_name: str):
         """Builds firmware
@@ -99,7 +100,7 @@ class SoCTestHarness:
         Args:
             firmware_name (str): Firmware name to build
         """
-        os.system(f"make -C ../fw/{firmware_name} all")
+        os.system(f"make -C ../fw/{firmware_name} clean all")
 
     def init_spiflash(self, firmware_name: str):
         with open(f"../fw/{firmware_name}/{firmware_name}.bin", "rb") as f:
@@ -132,5 +133,15 @@ def test_spi_boot_c(dut):
     harness = SoCTestHarness(dut)
     harness.build_fw("test_spi_boot_c")
     harness.init_spiflash("test_spi_boot_c")
+    yield harness.reset()
+    yield harness.wfi()
+
+
+@cocotb.test()
+def test_hyperbus_csr_c(dut):
+    """Test C firmware to use CSR access to hyperbus"""
+    harness = SoCTestHarness(dut)
+    harness.build_fw("test_hyperbus_csr_c")
+    harness.init_spiflash("test_hyperbus_csr_c")
     yield harness.reset()
     yield harness.wfi()
