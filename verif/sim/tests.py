@@ -54,7 +54,6 @@ class SoCTestHarness:
         tn.buff = bytes(inspect.stack()[2][3], encoding="ascii")
         self.dut.test_name.value = tn
 
-    @cocotb.coroutine
     async def _test_timeout(self):
         """coroutine started by the harness. Will fail a test if self.timeout_cycles elapses.
 
@@ -64,8 +63,7 @@ class SoCTestHarness:
         await ClockCycles(self.dut.clk, self.timeout_cycles)
         raise SimTimeoutError(f"Timeout after {self.timeout_cycles} cycles")
 
-    @cocotb.coroutine
-    def wfi(self):
+    async def wfi(self):
         """Wait for a 'wfi' instruction to be executed, then check return value (a0)
 
         Firmware can make use of this to issue a runtime error back to the simulation.
@@ -74,7 +72,7 @@ class SoCTestHarness:
             TestSuccess: When a0 == 0
             SimFailure: When a0 != 0
         """
-        yield RisingEdge(self.dut.wfi)
+        await RisingEdge(self.dut.wfi)
         if int(self.dut.a0.value) == 0:
             raise TestSuccess()
         else:
@@ -84,15 +82,14 @@ class SoCTestHarness:
             raise SimFailure()
 
     # Harness public functions for tests
-    @cocotb.coroutine
-    def reset(self):
+    async def reset(self):
         """Toggle the reset on the DUT, and wait for a clock edge"""
         self.dut.reset.value = 1
-        yield RisingEdge(self.dut.clk)
-        yield RisingEdge(self.dut.clk)
+        await RisingEdge(self.dut.clk)
+        await RisingEdge(self.dut.clk)
         self.dut.reset.value = 0
-        yield RisingEdge(self.dut.clk)
-        yield RisingEdge(self.dut.clk)
+        await RisingEdge(self.dut.clk)
+        await RisingEdge(self.dut.clk)
 
     def build_fw(self, firmware_name: str):
         """Builds firmware
@@ -107,14 +104,13 @@ class SoCTestHarness:
             for i, b in enumerate(f.read()):
                 self.dut.flash.memory[i].value = b
 
-    @cocotb.coroutine
-    def clock_cycles(self, cycles: int):
+    async def clock_cycles(self, cycles: int):
         """Wait for number of DUT clock cycles
 
         Args:
             cycles (int): cycles to wait for
         """
-        yield ClockCycles(self.dut.clk, cycles)
+        await ClockCycles(self.dut.clk, cycles)
 
 
 @cocotb.test()
