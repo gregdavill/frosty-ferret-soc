@@ -53,7 +53,7 @@ class HyperBusMMAP(Module, AutoCSR):
         # Burst Control.
         burst_cs      = Signal()
         burst_adr     = Signal(len(bus.adr), reset_less=True)
-        burst_timeout = WaitTimer(MMAP_DEFAULT_TIMEOUT)
+        burst_timeout = WaitTimer(1024) # TODO Fix this
         self.submodules += burst_timeout
 
         cmd_bits  = 8
@@ -65,6 +65,19 @@ class HyperBusMMAP(Module, AutoCSR):
 
         self.dummy_bits = dummy_bits = CSRStorage(8, reset=self._default_dummy_bits)
         self.comb += spi_dummy_bits.eq(dummy_bits.storage)
+
+        addr = Signal(24)
+        ca_bits = Signal(48)
+        self.comb += [
+            ca_bits[47].eq(~bus.we), # read = 1 / write = 0
+            ca_bits[46].eq(0), # Memory Space
+            ca_bits[45].eq(1), # Linear bursts
+            ca_bits[16:44].eq(Cat(Constant(0, 7), addr[2:24])), # Upper column address
+            ca_bits[3:15].eq(0), # Reserved
+            ca_bits[0:2].eq(Cat(0b0, addr[0:1])), # Lower column address
+        ]
+
+        latency_cnt = Signal(5)
             
 
         dummy = Signal(data_bits, reset=0xdead)
@@ -81,7 +94,8 @@ class HyperBusMMAP(Module, AutoCSR):
                 # If CS is still active and Bus address matches previous Burst address:
                 # Just continue the current Burst.
                 If(burst_cs & (bus.adr == burst_adr),
-                    NextState("BURST-REQ")
+                    NextState("WAIT"),
+                    NextValue(latency_cnt, 2),
                 # Otherwise initialize a new Burst.
                 ).Else(
                     cs.eq(0),
@@ -90,23 +104,21 @@ class HyperBusMMAP(Module, AutoCSR):
             )
         )
 
+
+        # TODO handle writes
+        # TODO handle variable latency
+        # TODO handle configurable latency
+
         fsm.act("BURST-CMD",
             cs.eq(1),
             source.valid.eq(1),
-            #source.data.eq(flash.read_opcode.code), # send command.
-            #source.len.eq(cmd_bits),
-            #source.width.eq(flash.cmd_width),
-            #source.mask.eq(cmd_oe_mask[flash.cmd_width]),
+            addr.eq(bus.adr),
+            source.data.eq(ca_bits[32:48]),
+            source.len.eq(16),
+            source.width.eq(8),
+            source.mask.eq(0xFF),
             NextValue(burst_adr, bus.adr),
             If(source.ready,
-                NextState("CMD-RET"),
-            )
-        )
-
-        fsm.act("CMD-RET",
-            cs.eq(1),
-            sink.ready.eq(1),
-            If(sink.valid,
                 NextState("BURST-ADDR"),
             )
         )
@@ -114,57 +126,38 @@ class HyperBusMMAP(Module, AutoCSR):
         fsm.act("BURST-ADDR",
             cs.eq(1),
             source.valid.eq(1),
-            #source.width.eq(flash.addr_width),
-            #source.mask.eq(addr_oe_mask[flash.addr_width]),
-            source.data.eq(Cat(Signal(2), bus.adr)), # send address.
-            #source.len.eq(flash.addr_bits),
+            addr.eq(bus.adr),
+            source.data.eq(ca_bits[0:32]),
+            source.len.eq(32),
+            source.width.eq(8),
+            source.mask.eq(0xFF),
             NextValue(burst_cs, 1),
             NextValue(burst_adr, bus.adr),
+            NextValue(latency_cnt, 12),
             If(source.ready,
-                NextState("ADDR-RET"),
-            )
-        )
-
-        fsm.act("ADDR-RET",
-            cs.eq(1),
-            sink.ready.eq(1),
-            If(sink.valid,
-                If(spi_dummy_bits == 0,
-                    NextState("BURST-REQ"),
-                ).Else(
-                    NextState("DUMMY"),
-                )
+                NextState("DUMMY"),
             )
         )
 
         fsm.act("DUMMY",
             cs.eq(1),
             source.valid.eq(1),
-            #source.width.eq(flash.addr_width),
-            #source.mask.eq(addr_oe_mask[flash.addr_width]),
-            source.data.eq(dummy),
-            source.len.eq(spi_dummy_bits),
-            If(source.ready,
-                NextState("DUMMY-RET"),
-            )
-        )
-
-        fsm.act("DUMMY-RET",
-            cs.eq(1),
-            sink.ready.eq(1),
-            If(sink.valid,
-                NextState("BURST-REQ"),
-            )
-        )
-
-        fsm.act("BURST-REQ",
-            cs.eq(1),
-            source.valid.eq(1),
-            source.last.eq(1),
-            #source.width.eq(flash.bus_width),
-            source.len.eq(data_bits),
+            source.width.eq(8),
             source.mask.eq(0),
+            source.len.eq(16),
             If(source.ready,
+                NextValue(latency_cnt, latency_cnt - 1),
+                If(latency_cnt == 0,
+                    NextValue(latency_cnt, 2),
+                    NextState("WAIT"),
+                )
+            )
+        )
+
+        fsm.act("WAIT",
+            cs.eq(1),
+            NextValue(latency_cnt, latency_cnt - 1),
+            If(latency_cnt == 0,
                 NextState("BURST-DAT"),
             )
         )
@@ -173,9 +166,8 @@ class HyperBusMMAP(Module, AutoCSR):
             cs.eq(1),
             sink.ready.eq(1),
             bus.dat_r.eq({"big": sink.data, "little": reverse_bytes(sink.data)}[endianness]),
-            If(sink.valid,
-                bus.ack.eq(1),
-                NextValue(burst_adr, burst_adr + 1),
-                NextState("IDLE"),
-            )
+
+            bus.ack.eq(1),
+            NextValue(burst_adr, burst_adr + 1),
+            NextState("IDLE"),
         )

@@ -65,6 +65,10 @@ int main() {
     if(0x1234abcf != read_value)
         return 2;
 
+    /* Memory mapped read */
+    uin32_t mmap_value = *(volatile uint32_t*)0x30000000;
+    if(0x1234abcf != mmap_value)
+        return 3;
 
     /* Got to main, return 0 success */
     return 0;
