@@ -33,7 +33,7 @@ class GF180_RAM(Module):
             datain.eq(self.bus.dat_w[0:32]),
             wren_b.eq(~(self.bus.we & self.bus.stb & self.bus.cyc)),
             self.bus.dat_r[0:32].eq(dataout),
-            cs_b.eq(~ResetSignal()),  # rstn is normally high -> cs_b low
+            cs_b.eq(ResetSignal()),  # rstn is normally high -> cs_b low
             # ),
             # maskwren is nibble based
             maskwren[0].eq(self.bus.sel[0]),
@@ -43,7 +43,7 @@ class GF180_RAM(Module):
         ]
         self.specials += Instance("GF180_RAM_512x32",
                                   i_CLK=ClockSignal("sys"),
-                                  i_A=self.bus.adr[:10],
+                                  i_A=self.bus.adr[:9],
                                   i_D=datain,
                                   i_GWEN=wren_b,
                                   i_WEN=~maskwren,
