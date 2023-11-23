@@ -42,7 +42,7 @@ from rtl.platform.icebreaker_ppp import Platform as FPGAPlatform
 from rtl.platform.sim import Platform as SimPlatform
 
 from litex.soc.cores.led import LedChaser
-from litespi.modules import W25Q32
+from litespi.modules import W25Q32DW
 from litespi.opcodes import SpiNorFlashOpCodes as Codes
 
 # System constants ---------------------------------------------------------------------------------
@@ -55,11 +55,13 @@ prefix = ""  # sometimes 'soc_', sometimes '' prefix Litex is attaching to net n
 
 # FrostyFerretSoc -------------------------------------------------------------------------------------
 
-class FrostyFerretSoc(SoCCore):
+class FrostyFerretSoc(SoCCore, AutoDoc):
     # I/O range: 0x80000000-0xfffffffff (not cacheable)
     SoCCore.mem_map = {
         "rom":             0x80000000, # uncached
+        "sram":            0x10000000,
         "spiflash":        0x20000000,
+        "hyperbus0":       0x30000000,
         "vexriscv_debug":  0xefff0000, # this doesn't "stick", LiteX overrides it, so if you use it, you will have to hard code it. Also, search & replace for changes.
         "csr":             0xf0000000,
     }
@@ -79,7 +81,8 @@ class FrostyFerretSoc(SoCCore):
             cpu_variant          = None,
             csr_paging           = 4096,  # increase paging to 1 page size
             csr_address_width    = 16,    # increase to accommodate larger page size
-            with_uart            = False, # implemented manually to allow for UART mux
+            with_uart            = True, # implemented manually to allow for UART mux
+            uart_baudrate        = 2000000,
             cpu_reset_address    = reset_address,
             with_ctrl            = True,
             with_timer           = True,
@@ -106,14 +109,17 @@ class FrostyFerretSoc(SoCCore):
 
         # Fix the location of CSRs and IRQs so we can do firmware updates between generations of the SoC
         self.csr.locs = {
-            'reboot': 0,
-            'timer0': 1,
-            'crg': 2,
-            'gpio': 3,
-            # 'uart_phy': 4,
-            'uart': 5,
-            'spiflash_core': 6,
-            'spiflash_phy': 7,
+            # 'reboot': 0,
+            # 'timer0': 1,
+            # 'crg': 2,
+            # 'gpio': 3,
+            # 'ctrl': 4,
+            # 'uart': 5,
+            # 'spiflash_core': 6,
+            # 'spiflash_phy': 7,
+            # 'hyperbus0_core': 8,
+            # 'hyperbus0_phy': 9,
+            # 'leds': 10,
         }
 
         self.irq.locs = {
@@ -127,7 +133,23 @@ class FrostyFerretSoc(SoCCore):
             pads         = platform.request_all("user_led"),
             sys_clk_freq = sys_clk_freq)
 
-        self.add_spi_flash(mode="4x", module=W25Q32(Codes.READ_1_1_1), with_master=True)
+        self.add_spi_flash(mode="4x", module=W25Q32DW(Codes.READ_1_1_1), with_master=True)
+
+
+        self.platform.add_source("rtl/ecp5_hyperram_io.v")
+        # Add HyperBus
+        # PHY
+        from hyperbus.phy.generic import HyperBusPHY
+        from hyperbus import HyperBus
+        self.hyperbus0_phy = HyperBusPHY(self.platform.request("hyperbus0"))
+        # Core
+        hyperbus0_core = HyperBus(self.hyperbus0_phy, mmap_endianness=self.cpu.endianness, **kwargs)
+        self.add_module(name=f"hyperbus0_core", module=hyperbus0_core)
+        spiflash_region = SoCRegion(origin=self.mem_map.get("hyperbus0", None), size=0x10000000)
+        self.bus.add_slave("hyperbus0", slave=hyperbus0_core.bus, region=spiflash_region)
+
+
+        self.do_finalize()
 
 # Build --------------------------------------------------------------------------------------------
 
@@ -160,7 +182,7 @@ def main():
     
     vns = builder.build()
     soc.do_exit(vns)
-    lxsocdoc.generate_docs(soc, "build/documentation", note_pulses=True, quiet=True)
+    lxsocdoc.generate_docs(soc, "build/documentation", note_pulses=True, quiet=True, sphinx_extensions=['sphinx_verilog_domain'])
     os.system("sphinx-build -M html build/documentation/ build/documentation/_build")
         
     

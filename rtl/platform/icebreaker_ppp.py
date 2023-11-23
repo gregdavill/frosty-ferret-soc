@@ -43,6 +43,22 @@ _io = [
         Subsignal("dq",   Pins("T8 T7 M7 N7")),
         IOStandard("LVCMOS33")
     ),
+    ("hyperbus0", 0,
+        Subsignal("reset_n", Pins("F13")),
+        Subsignal("cs_n", Pins("F12")),
+        Subsignal("clk_p",  Pins("G12")),
+        Subsignal("clk_n",  Pins("G13")),
+        Subsignal("dq",   Pins("E15 G16 F14 D16 G15 E16 C16 C15")),
+        Subsignal("rwds",  Pins("H14")),
+        Subsignal("debug",  Pins("C2")),
+        
+        IOStandard("LVCMOS33")
+    ),
+    ("serial", 0,
+        Subsignal("tx", Pins("C1")),
+        Subsignal("rx", Pins("C3")),
+    )
+    
 ]
 
 # Connectors ---------------------------------------------------------------------------------------

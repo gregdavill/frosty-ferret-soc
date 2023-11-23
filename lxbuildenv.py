@@ -91,6 +91,10 @@ def get_python_path(script_path, args):
             dep = script_path + DEPS_DIR + os.path.sep + dep
             if os.path.isdir(dep):
                 python_path.append(dep)
+    
+    dep = script_path + 'blocks' + os.path.sep + 'hyperbus'
+    if os.path.isdir(dep):
+        python_path.append(dep)
     return python_path
 
 def fixup_env(script_path, args):

@@ -26,6 +26,19 @@ _io = [
         Subsignal("clk",  Pins(1)),
         Subsignal("dq",   Pins(4)),
     ),
+    # Hyperbus
+    ("hyperbus0", 0,
+        Subsignal("reset_n", Pins(1)),
+        Subsignal("cs_n", Pins(1)),
+        Subsignal("clk_p",  Pins(1)),
+        Subsignal("clk_n",  Pins(1)),
+        Subsignal("dq",   Pins(8)),
+        Subsignal("rwds",  Pins(1))
+    ),
+    ("serial", 0,
+        Subsignal("tx", Pins(1)),
+        Subsignal("rx", Pins(1)),
+    ),
 
     ("clk", 0, Pins(1)),
     ("reset", 0, Pins(1)),
@@ -40,11 +53,22 @@ class _CRG(Module):
         clk = platform.request("clk")
         rst = platform.request("reset")
 
+
+        
         self.clock_domains.cd_sys = ClockDomain()
         self.comb += self.cd_sys.clk.eq(clk)
 
+        # Power on reset
+        self.clock_domains.cd_por     = ClockDomain()
+        por_count = Signal(7, reset=2**7-1)
+        por_done  = Signal()
+        self.comb += self.cd_por.clk.eq(clk)
+        self.comb += por_done.eq(por_count == 0)
+        self.sync.por += If(~por_done, por_count.eq(por_count - 1))
+
         self.comb += [
-            ResetSignal("sys").eq(rst),
+            ResetSignal("sys").eq(rst | ~por_done),
+            ResetSignal("por").eq(rst),
         ]
 
 class Platform(SimPlatform):
