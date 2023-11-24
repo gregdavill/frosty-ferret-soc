@@ -230,7 +230,11 @@ module hyperbus_io(
     );
 
     /* Chip select */
-    assign cs_n = ~cs_en;
+    reg cs;
+    always @(posedge clk) begin
+        cs <= ~cs_en;
+    end
+    assign cs_n = cs;
     assign reset_n = ~rst;
 
     assign debug = dq_i_capt_r;

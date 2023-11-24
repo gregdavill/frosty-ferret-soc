@@ -66,9 +66,32 @@ int main() {
         return 2;
 
     /* Memory mapped read */
-    uin32_t mmap_value = *(volatile uint32_t*)0x30000000;
-    if(0x1234abcf != mmap_value)
+    uint32_t mmap_value = *(volatile uint32_t*)0x30000000;
+    if(0xcfab3412 != mmap_value)
         return 3;
+
+    /* MMAP write */
+    *(volatile uint32_t*)0x30000010 = 0xAB22DE01;
+    mmap_value = *(volatile uint32_t*)0x30000010;
+    if(0xAB22DE01 != mmap_value)
+        return 4;
+
+    /* Back-to-back incrementing write */
+    *(volatile uint32_t*)0x30000040 = 0xb3829dea;
+    *(volatile uint32_t*)0x30000044 = 0x0391bcef;
+    *(volatile uint32_t*)0x30000048 = 0x94751efa;
+    *(volatile uint32_t*)0x3000004c = 0xabe5910d;
+    
+    if(*(volatile uint32_t*)0x30000040 != 0xb3829dea)
+        return 5;
+    if(*(volatile uint32_t*)0x30000044 != 0x0391bcef)
+        return 6;
+    if(*(volatile uint32_t*)0x30000048 != 0x94751efa)
+        return 7;
+    if(*(volatile uint32_t*)0x3000004c != 0xabe5910d)
+        return 8;
+    
+    
 
     /* Got to main, return 0 success */
     return 0;

@@ -52,19 +52,17 @@ class HyperBusMMAP(Module, AutoCSR):
 
         # Burst Control.
         burst_cs      = Signal()
+        burst_we      = Signal()
         burst_adr     = Signal(len(bus.adr), reset_less=True)
-        burst_timeout = WaitTimer(1024) # TODO Fix this
+        burst_timeout = WaitTimer(5) # TODO Fix this
         self.submodules += burst_timeout
 
         cmd_bits  = 8
         data_bits = 32
 
-        self._default_dummy_bits = 0
-
-        self._spi_dummy_bits = spi_dummy_bits = Signal(8)
-
-        self.dummy_bits = dummy_bits = CSRStorage(8, reset=self._default_dummy_bits)
-        self.comb += spi_dummy_bits.eq(dummy_bits.storage)
+        self._latency_cycles = CSRStorage(8, reset=6)
+        _latency_cycles = self._latency_cycles.storage
+        _extra_latency_flag = Signal()
 
         addr = Signal(24)
         ca_bits = Signal(48)
@@ -72,15 +70,12 @@ class HyperBusMMAP(Module, AutoCSR):
             ca_bits[47].eq(~bus.we), # read = 1 / write = 0
             ca_bits[46].eq(0), # Memory Space
             ca_bits[45].eq(1), # Linear bursts
-            ca_bits[16:44].eq(Cat(Constant(0, 7), addr[2:24])), # Upper column address
-            ca_bits[3:15].eq(0), # Reserved
-            ca_bits[0:2].eq(Cat(0b0, addr[0:1])), # Lower column address
+            ca_bits[16:45].eq(addr[2:24]), # Upper column address
+            ca_bits[3:16].eq(0), # Reserved
+            ca_bits[0:3].eq(Cat(Constant(0, 1), addr[0:2])), # Lower column address
         ]
 
         latency_cnt = Signal(5)
-            
-
-        dummy = Signal(data_bits, reset=0xdead)
 
         # FSM.
         self.submodules.fsm = fsm = FSM(reset_state="IDLE")
@@ -90,12 +85,16 @@ class HyperBusMMAP(Module, AutoCSR):
             NextValue(burst_cs, burst_cs & ~burst_timeout.done),
             cs.eq(burst_cs),
             # On Bus Read access...
-            If(bus.cyc & bus.stb & ~bus.we,
+            If(bus.cyc & bus.stb,
                 # If CS is still active and Bus address matches previous Burst address:
                 # Just continue the current Burst.
-                If(burst_cs & (bus.adr == burst_adr),
-                    NextState("WAIT"),
-                    NextValue(latency_cnt, 2),
+                If(burst_cs & (bus.adr == burst_adr) & (burst_we == bus.we),
+                    If(bus.we,
+                        NextState("BURST-WR")
+                    ).Else(       
+                        NextValue(latency_cnt, 1),
+                        NextState("BURST-RD"),
+                    )
                 # Otherwise initialize a new Burst.
                 ).Else(
                     cs.eq(0),
@@ -104,8 +103,6 @@ class HyperBusMMAP(Module, AutoCSR):
             )
         )
 
-
-        # TODO handle writes
         # TODO handle variable latency
         # TODO handle configurable latency
 
@@ -114,11 +111,11 @@ class HyperBusMMAP(Module, AutoCSR):
             source.valid.eq(1),
             addr.eq(bus.adr),
             source.data.eq(ca_bits[32:48]),
-            source.len.eq(16),
-            source.width.eq(8),
+            source.len.eq(16),    
             source.mask.eq(0xFF),
-            NextValue(burst_adr, bus.adr),
             If(source.ready,
+                NextValue(burst_adr, bus.adr),
+                NextValue(burst_we, bus.we),
                 NextState("BURST-ADDR"),
             )
         )
@@ -128,29 +125,79 @@ class HyperBusMMAP(Module, AutoCSR):
             source.valid.eq(1),
             addr.eq(bus.adr),
             source.data.eq(ca_bits[0:32]),
-            source.len.eq(32),
-            source.width.eq(8),
+            source.len.eq(32),    
             source.mask.eq(0xFF),
             NextValue(burst_cs, 1),
-            NextValue(burst_adr, bus.adr),
-            NextValue(latency_cnt, 12),
-            If(source.ready,
-                NextState("DUMMY"),
+            NextValue(latency_cnt, _latency_cycles-2), # Latency count starts in the CA bits
+            NextState("INITIAL-LATENCY"),
+        )
+
+        fsm.act("INITIAL-LATENCY",
+            cs.eq(1),
+            sink.ready.eq(1),
+            source.valid.eq(1),    
+            source.mask.eq(0),
+            source.len.eq(16),
+            NextValue(_extra_latency_flag, _extra_latency_flag | self.sink.rwds_bypass),
+            NextValue(latency_cnt, latency_cnt - 1),
+            If(latency_cnt == 0,
+               
+                # No Extra Latency
+                If(_extra_latency_flag,
+                    NextValue(latency_cnt, _latency_cycles),
+                    NextState("SECOND-LATENCY"),
+
+                # Extra Latency Cycle
+                ).Else(
+                    If(bus.we,
+                        NextState("BURST-WR"),
+                    ).Else(
+                        NextValue(latency_cnt, 4),
+                        NextState("WAIT"),
+                    )
+                )
             )
         )
 
-        fsm.act("DUMMY",
+        fsm.act("SECOND-LATENCY",
             cs.eq(1),
-            source.valid.eq(1),
-            source.width.eq(8),
+            source.valid.eq(1),    
             source.mask.eq(0),
             source.len.eq(16),
+            NextValue(latency_cnt, latency_cnt - 1),
+            If((latency_cnt == 0) & bus.we,
+                NextState("BURST-WR"),
+            ).Elif((latency_cnt == 1) & ~bus.we,
+                NextValue(latency_cnt, 2),
+                NextState("BURST-RD"),
+            )
+        )
+        
+        fsm.act("BURST-WR",
+            cs.eq(1),
+            sink.ready.eq(1),
+            source.data.eq({"big": bus.dat_w, "little": reverse_bytes(bus.dat_w)}[endianness]),
+            source.valid.eq(1),    
+            source.mask.eq(0xFF),
+            source.len.eq(32),
+            source.rwds_en.eq(1),
+            source.rwds.eq(0x0),
             If(source.ready,
-                NextValue(latency_cnt, latency_cnt - 1),
-                If(latency_cnt == 0,
-                    NextValue(latency_cnt, 2),
-                    NextState("WAIT"),
-                )
+                bus.ack.eq(1),
+                NextValue(burst_adr, burst_adr + 1),
+                NextState("IDLE"),
+            )
+        )
+
+        fsm.act("BURST-RD",
+            cs.eq(1),
+            source.valid.eq(1),    
+            source.mask.eq(0),
+            source.len.eq(16),
+            NextValue(latency_cnt, latency_cnt - 1),
+            If(latency_cnt == 0,
+                NextValue(latency_cnt, 4),
+                NextState("WAIT"),
             )
         )
 

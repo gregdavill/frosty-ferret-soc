@@ -78,7 +78,7 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
         clk_en = Signal()
 
         # CS control.
-        cs_timer  = WaitTimer(cs_delay + 1) # Ensure cs_delay cycles between XFers.
+        cs_timer  = WaitTimer(cs_delay + 3) # Ensure cs_delay cycles between XFers.
         cs_enable = Signal()
         self.submodules += cs_timer
         self.comb += cs_timer.wait.eq(self.cs)
@@ -139,64 +139,35 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
 
         # Data Out Shift.
         self.comb += [
-            Case(width, {
-                1:  dq_o[0].eq(sr_out[-1:]),
-                2:  dq_o[0].eq(sr_out[-2:]),
-                4:  dq_o[0].eq(sr_out[-4:]),
-                8:  dq_o[0].eq(sr_out[-8:]),
-            }),
-            Case(width, {
-                1:  dq_o[1].eq(sr_out[-2:-1]),
-                2:  dq_o[1].eq(sr_out[-4:-2]),
-                4:  dq_o[1].eq(sr_out[-8:-4]),
-                8:  dq_o[1].eq(sr_out[-16:-8]),
-            }),
+            dq_o[0].eq(sr_out[-8:]),
+            dq_o[1].eq(sr_out[-16:-8]),
+
             dq_oe[1].eq(mask),
             dq_oe[0].eq(mask),
 
-            Case(width, {
-                8:  rwds_o[0].eq(rwds_out[-1:]),
-            }),
-            Case(width, {
-                8:  rwds_o[1].eq(rwds_out[-2:-1]),
-            }),
+            rwds_o[0].eq(rwds_out[-1:]),
+            rwds_o[1].eq(rwds_out[-2:-1]),
 
             rwds_oe[1].eq(rwds_en),
             rwds_oe[0].eq(rwds_en),
         ]
 
         self.sync += If(sr_out_shift & ~sr_out_load,
-            #dq_o[0].eq(dq_o[1]),
-            #dq_oe[0].eq(dq_oe[1]),
-            Case(width, {
-                1 : sr_out.eq(Cat(Signal(1*2), sr_out)),
-                2 : sr_out.eq(Cat(Signal(2*2), sr_out)),
-                4 : sr_out.eq(Cat(Signal(4*2), sr_out)),
-                8 : sr_out.eq(Cat(Signal(8*2), sr_out)),
-            }),
-
-            Case(width, {
-                8 : rwds_out.eq(Cat(Signal(2), rwds_out)),
-            })
+            sr_out.eq(Cat(Constant(0, 16), sr_out)),
+            rwds_out.eq(Cat(Constant(0, 2), rwds_out)),
         )
 
         self.sync += If(sr_out_load,
             sr_out.eq(sink.data << (len(sink.data) - sink.len)),
             rwds_out.eq(sink.rwds << (len(sink.rwds) - (sink.len >> 3))),
             last.eq(sink.last),
-            width.eq(sink.width),
             mask.eq(sink.mask),
             rwds_en.eq(sink.rwds_en),
         )
 
         # Data In Shift.
         self.sync += If(sr_in_shift,
-            Case(width, {
-                1 : sr_in.eq(Cat(dq_i[1][1],  dq_i[0][1],  sr_in)), # 1: pads.miso
-                2 : sr_in.eq(Cat(dq_i[1][:2], dq_i[0][:2], sr_in)),
-                4 : sr_in.eq(Cat(dq_i[1][:4], dq_i[0][:4], sr_in)),
-                8 : sr_in.eq(Cat(dq_i[1][:8], dq_i[0][:8], sr_in)),
-            })
+            sr_in.eq(Cat(dq_i[1][:8], dq_i[0][:8], sr_in)),
         )
 
         self.comb += [
@@ -208,20 +179,25 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
         fsm.act("WAIT-CMD-DATA",
             # Stop Clk.
             NextValue(clk_en, 0),
+
+            NextValue(source.valid, 0),
+            NextValue(source.last, 0),
+
             # Wait for CS and a CMD from the Core.
             If(cs_enable & sink.valid,
                 # Load Shift Register Count/Data Out.
-                NextValue(sr_cnt, sink.len - sink.width*2),
+                NextValue(sr_cnt, sink.len - 8*2),
                 sr_out_load.eq(1),
+                
+                # Generate Clk.
                 NextValue(clk_en,  1),
+                
                 # Start XFER.
                 NextState("XFER")
             )
         )
 
         fsm.act("XFER",
-            # Generate Clk.
-
             # Data In Shift.
             sr_in_shift.eq(1),
 
@@ -229,7 +205,7 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
             sr_out_shift.eq(1),
 
             # Shift Register Count Update/Check.
-            NextValue(sr_cnt, sr_cnt - width*2),
+            NextValue(sr_cnt, sr_cnt - 8*2),
             # End XFer.
             If(sr_cnt == 0,
                 # No more data?
@@ -241,33 +217,40 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
                     NextState("XFER-END"),
                 ).Else(
                     # Load Shift Register Count/Data Out.
-                    NextValue(sr_cnt, sink.len - sink.width*2),
+                    NextValue(sr_cnt, sink.len - 8*2),
                     sr_out_load.eq(1),
                 )
-
             ),
         )
+
         fsm.act("XFER-END",
+            # Stop Clk.
             NextValue(clk_en, 0),
 
             # Data In Shift.
             sr_in_shift.eq(1),
 
             # Shift Register Count Update/Check.
-            NextValue(sr_cnt, sr_cnt - width),
+            NextValue(sr_cnt, sr_cnt - 8),
             If(sr_cnt == 0,
                 
                 NextValue(sr_cnt, 0),
-                NextState("SEND-STATUS-DATA"),
+                If(cs_enable & sink.valid,
+                    # Load Shift Register Count/Data Out.
+                    NextValue(sr_cnt, sink.len - 8*2),
+                    sr_out_load.eq(1),
+                    
+                    # Generate Clk.
+                    NextValue(clk_en,  1),
+                    
+                    # Start XFER.
+                    NextState("XFER")
+                ).Else(
+                    NextValue(source.valid, 1),
+                    NextValue(source.last, 1),
+                    NextState("WAIT-CMD-DATA"),
+                )
             ),
         )
         self.comb += source.data.eq(sr_in)
 
-        fsm.act("SEND-STATUS-DATA",
-            # Send Data In to Core and return to WAIT when accepted.
-            source.valid.eq(1),
-            source.last.eq(1),
-            #If(source.ready,
-                NextState("WAIT-CMD-DATA"),
-            #)
-        )
