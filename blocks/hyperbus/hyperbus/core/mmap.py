@@ -128,7 +128,8 @@ class HyperBusMMAP(Module, AutoCSR):
             source.len.eq(32),    
             source.mask.eq(0xFF),
             NextValue(burst_cs, 1),
-            NextValue(latency_cnt, _latency_cycles-2), # Latency count starts in the CA bits
+            NextValue(latency_cnt, _latency_cycles-1), # Latency count starts in the CA bits
+            NextValue(_extra_latency_flag, 0),
             NextState("INITIAL-LATENCY"),
         )
 
@@ -143,13 +144,15 @@ class HyperBusMMAP(Module, AutoCSR):
             If(latency_cnt == 0,
                
                 # No Extra Latency
-                If(_extra_latency_flag,
-                    NextValue(latency_cnt, _latency_cycles),
+                If(_extra_latency_flag | self.sink.rwds_bypass,
+                    NextValue(latency_cnt, _latency_cycles-1),
                     NextState("SECOND-LATENCY"),
 
                 # Extra Latency Cycle
                 ).Else(
                     If(bus.we,
+                        source.mask.eq(0xFF),
+                        source.rwds_en.eq(1),
                         NextState("BURST-WR"),
                     ).Else(
                         NextValue(latency_cnt, 4),
@@ -166,6 +169,8 @@ class HyperBusMMAP(Module, AutoCSR):
             source.len.eq(16),
             NextValue(latency_cnt, latency_cnt - 1),
             If((latency_cnt == 0) & bus.we,
+                source.mask.eq(0xFF),
+                source.rwds_en.eq(1),
                 NextState("BURST-WR"),
             ).Elif((latency_cnt == 1) & ~bus.we,
                 NextValue(latency_cnt, 2),

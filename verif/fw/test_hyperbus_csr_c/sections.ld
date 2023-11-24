@@ -16,7 +16,7 @@ SECTIONS
 		*(.text.start)
 		*(.text .stub .text.* .gnu.linkonce.t.*)
 		_etext = .;
-	} > spiflash
+	} > sram
 
 	.rodata :
 	{
@@ -26,7 +26,7 @@ SECTIONS
 		*(.rodata1)
 		*(.srodata)
 		_erodata = .;
-	} > spiflash
+	} > sram
 
 	.data : AT (ADDR(.rodata) + SIZEOF (.rodata))
 	{

@@ -103,6 +103,17 @@ class SoCTestHarness:
         with open(f"../fw/{firmware_name}/{firmware_name}.bin", "rb") as f:
             for i, b in enumerate(f.read()):
                 self.dut.flash.memory[i].value = b
+    
+    def init_sram(self, firmware_name: str):
+        with open(f"../fw/{firmware_name}/{firmware_name}.bin", "rb") as f:
+            ram_arrays = [
+                self.dut.dut.GF180_RAM_512x32.RAM00,
+                self.dut.dut.GF180_RAM_512x32.RAM01,
+                self.dut.dut.GF180_RAM_512x32.RAM02,
+                self.dut.dut.GF180_RAM_512x32.RAM03
+            ]
+            for i, b in enumerate(f.read()):
+                ram_arrays[i % 4].RAM.mem[i // 4].value = b
 
     async def clock_cycles(self, cycles: int):
         """Wait for number of DUT clock cycles
@@ -137,7 +148,10 @@ def test_spi_boot_c(dut):
 def test_hyperbus_csr_c(dut):
     """Test C firmware to use CSR access to hyperbus"""
     harness = SoCTestHarness(dut)
+    harness.build_fw("jump_to_sram")
+    harness.init_spiflash("jump_to_sram")
+
     harness.build_fw("test_hyperbus_csr_c")
-    harness.init_spiflash("test_hyperbus_csr_c")
+    harness.init_sram("test_hyperbus_csr_c")
     yield harness.reset()
     yield harness.wfi()

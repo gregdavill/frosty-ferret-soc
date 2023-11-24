@@ -50,6 +50,31 @@ uint32_t hyperram_read(uint32_t addr){
     return HYPERBUS0->rxtx;
 }
 
+void hyperram_cfg(uint32_t cfg){
+    HYPERBUS0->config = (const hyperbusConfig_t){.hyperbus_enable=1,.latency_count=7,.latency_variable=false, .data_size=0};
+    HYPERBUS0->cmd = (HYPERBUS_CMD_WRITE | HYPERBUS_AREA_REG);
+    HYPERBUS0->adr = 0x01000000;    
+    HYPERBUS0->rxtx = cfg;
+    HYPERBUS0->ctrl = (const hyperbusCtrl_t){
+        .adr_phase = true,
+        .write_phase = true,
+        .start = true
+    };
+
+    while(HYPERBUS0->status.busy);
+}
+
+uint32_t rand(void)
+{
+    static uint32_t state = 1;
+    uint32_t x = state;
+    x ^= x <<17;
+    x ^= x >>7;
+    x ^= x <<5;
+    state = x;
+    return x;
+  }
+
 /* ---- Main Function ---- */
 int main() {
 
@@ -91,7 +116,56 @@ int main() {
     if(*(volatile uint32_t*)0x3000004c != 0xabe5910d)
         return 8;
     
+    /* Test adjustable latency */
+    // Model only supports 6-3 cycle latency
+    // hyperram_cfg(0x8F0F | (((8) + 11) & 0xF) << 4); /* 8 cycle latency*/
+    // HYPERBUS0->latency_cycles = 8;
+    // *(volatile uint32_t*)0x30001000 = 0x4920baef;
+
+    // if(*(volatile uint32_t*)0x30001000 != 0x4920baef)
+    //     return 9;
+
+    // hyperram_cfg(0x8F0F | (((7) + 11) & 0xF) << 4); /* 7 cycle latency*/
+    // HYPERBUS0->latency_cycles = 7;
+    // *(volatile uint32_t*)0x30001004 = 0x4920baef;
+
+    // if(*(volatile uint32_t*)0x30001004 != 0x4920baef)
+    //     return 10;
+
+    hyperram_cfg(0x8F0F | (((6) + 11) & 0xF) << 4); /* 6 cycle latency*/
+    HYPERBUS0->latency_cycles = 6;
     
+    uint32_t v = rand();
+    *(volatile uint32_t*)0x30001008 = v;
+    if(*(volatile uint32_t*)0x30001008 != v)
+        return 11;
+
+    hyperram_cfg(0x8F0F | (((5) + 11) & 0xF) << 4); /* 5 cycle latency*/
+    HYPERBUS0->latency_cycles = 5;
+    
+    v = rand();
+    *(volatile uint32_t*)0x3000100c = v;
+    if(*(volatile uint32_t*)0x3000100c != v)
+        return 12;
+
+
+    hyperram_cfg(0x8F0F | (((4) + 11) & 0xF) << 4); /* 4 cycle latency*/
+    HYPERBUS0->latency_cycles = 4;
+    
+    v = rand();
+    *(volatile uint32_t*)0x30001010 = v;
+    if(*(volatile uint32_t*)0x30001010 != v)
+        return 13;
+
+
+    hyperram_cfg(0x8F0F | (((3) + 11) & 0xF) << 4); /* 3 cycle latency*/
+    HYPERBUS0->latency_cycles = 3;
+    
+    v = rand();
+    *(volatile uint32_t*)0x30001014 = v;
+    if(*(volatile uint32_t*)0x30001014 != v)
+        return 14;
+
 
     /* Got to main, return 0 success */
     return 0;

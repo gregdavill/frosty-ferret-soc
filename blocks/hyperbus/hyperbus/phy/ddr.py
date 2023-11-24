@@ -58,10 +58,6 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
 
         self.rwds_bypass = Signal()
 
-
-
-
-
         # Clock Generator.
         clk_en = Signal()
 
@@ -152,7 +148,7 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
             rwds_en.eq(sink.rwds_en),
         
         # Tri-state outputs when IDLE
-        ).Elif(fsm.ongoing("WAIT-CMD-DATA"),
+        ).Elif(fsm.ongoing("WAIT-CMD-DATA") & ~cs_enable,
             mask.eq(0),
             rwds_en.eq(0),
         )

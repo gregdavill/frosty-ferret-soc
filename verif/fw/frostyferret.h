@@ -33,7 +33,7 @@ typedef struct {
 } hyperbusConfig_t;
 
 typedef struct {
-    volatile uint32_t mmap_dummy;
+    volatile uint32_t latency_cycles;
     volatile uint32_t cs;
     volatile uint32_t rxtx;
     volatile uint32_t reserved;
