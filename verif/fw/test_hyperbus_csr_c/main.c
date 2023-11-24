@@ -20,7 +20,7 @@ int hyperram_read_id(){
 
 int hyperram_write(uint32_t addr, uint32_t data){
     HYPERBUS0->ctrl = (const hyperbusCtrl_t){.reset=1};
-    HYPERBUS0->config = (const hyperbusConfig_t){.hyperbus_enable=1,.latency_count=7,.latency_variable=false};
+    HYPERBUS0->config = (const hyperbusConfig_t){.hyperbus_enable=1,.latency_count=7,.latency_variable=false, .data_size=1};
     HYPERBUS0->cmd = (HYPERBUS_CMD_WRITE | HYPERBUS_AREA_MEM);
     HYPERBUS0->adr = addr;
     HYPERBUS0->rxtx = data;
@@ -36,7 +36,7 @@ int hyperram_write(uint32_t addr, uint32_t data){
 
 uint32_t hyperram_read(uint32_t addr){
     HYPERBUS0->ctrl = (const hyperbusCtrl_t){.reset=1};
-    HYPERBUS0->config = (const hyperbusConfig_t){.hyperbus_enable=1,.latency_count=7,.latency_variable=false};
+    HYPERBUS0->config = (const hyperbusConfig_t){.hyperbus_enable=1,.latency_count=7,.latency_variable=false, .data_size=1};
     HYPERBUS0->cmd = (HYPERBUS_CMD_READ | HYPERBUS_AREA_MEM);
     HYPERBUS0->adr = addr;
     HYPERBUS0->ctrl = (const hyperbusCtrl_t){
@@ -81,7 +81,7 @@ int main() {
     *(volatile uint32_t*)0x30000044 = 0x0391bcef;
     *(volatile uint32_t*)0x30000048 = 0x94751efa;
     *(volatile uint32_t*)0x3000004c = 0xabe5910d;
-    
+
     if(*(volatile uint32_t*)0x30000040 != 0xb3829dea)
         return 5;
     if(*(volatile uint32_t*)0x30000044 != 0x0391bcef)

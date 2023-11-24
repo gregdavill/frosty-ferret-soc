@@ -112,18 +112,20 @@ module hyperbus_io(
     reg rwds_o_capt_r;
     reg rwds_o_capt_f;
     reg rwds_o_capt_f0;
+    reg rwds_oe0;
     wire rwds_o;
 
     always @(posedge clk) begin
         rwds_o_capt_r <= rwds0;
         rwds_o_capt_f0 <= rwds1;
+        rwds_oe0 <= rwds_oe;
     end
     always @(negedge clk) begin
         rwds_o_capt_f <= rwds_o_capt_f0;
     end
 
     assign rwds_o = clk ? rwds_o_capt_r : rwds_o_capt_f;
-    assign rwds_pad = rwds_oe ? rwds_o : 1'bz;
+    assign rwds_pad = rwds_oe0 ? rwds_o : 1'bz;
 
 
 

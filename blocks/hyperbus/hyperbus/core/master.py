@@ -81,6 +81,12 @@ class HyperBusMaster(Module, AutoCSR):
                     ],
                 ),
                 CSRField(
+                    "data_size",
+                    size=1,
+                    offset=8,
+                    reset=0,
+                ),
+                CSRField(
                     "latency_count",
                     size=4,
                     offset=16,
@@ -187,7 +193,7 @@ class HyperBusMaster(Module, AutoCSR):
             tx_fifo.sink.data.eq(self._rxtx.r),
             tx_fifo.sink.rwds.eq(0x0),
             tx_fifo.sink.rwds_en.eq(0x3),
-            tx_fifo.sink.len.eq(32),
+            tx_fifo.sink.len.eq(16 << self._hyperbus_cfg.fields.data_size),
             tx_fifo.sink.width.eq(8),
             tx_fifo.sink.mask.eq(0xFF),
             tx_fifo.sink.last.eq(1),

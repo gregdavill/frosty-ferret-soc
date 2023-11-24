@@ -26,7 +26,9 @@ typedef struct {
 typedef struct {
     uint32_t hyperbus_enable : 1;
     uint32_t latency_variable : 1;
-    uint32_t reserved0 : 14;
+    uint32_t reserved0 : 6;
+    uint32_t data_size : 1;
+    uint32_t reserved1 : 7;
     uint32_t latency_count : 4;
 } hyperbusConfig_t;
 

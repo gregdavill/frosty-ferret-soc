@@ -58,21 +58,9 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
 
         self.rwds_bypass = Signal()
 
-        if hasattr(pads, "miso"):
-            bus_width = 1
-            pads.dq   = [pads.mosi, pads.miso]
-        else:
-            bus_width = len(pads.dq)
 
-        assert bus_width in [1, 2, 4, 8]
 
-        # Check if number of pads matches configured mode.
-        # assert flash.check_bus_width(bus_width)
 
-        self.addr_bits  = addr_bits  = 24
-        self.ddr        = ddr        = True#flash.ddr
-
-        #assert not ddr
 
         # Clock Generator.
         clk_en = Signal()
@@ -93,15 +81,12 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
         rwds_oe = Array([Signal(len(pads.rwds)) for _ in range(2)])
 
 
-        
-
         # Data Shift Registers.
         sr_cnt       = Signal(8, reset_less=True)
         sr_out_load  = Signal()
         sr_out_shift = Signal()
         sr_out       = Signal(len(sink.data), reset_less=True)
         rwds_out     = Signal(len(sink.rwds), reset_less=True)
-        width        = Signal(len(sink.width), reset_less=True)
         mask         = Signal(len(sink.mask), reset_less=True)
         rwds_en      = Signal(len(sink.rwds_en), reset_less=True)
         last         = Signal(reset_less=True)
@@ -134,7 +119,7 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
                         o_reset_n=pads.reset_n,
                         o_cs_n=pads.cs_n
                         #o_debug=pads.debug
-                     )
+                    )
         ]
 
         # Data Out Shift.
@@ -157,12 +142,19 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
             rwds_out.eq(Cat(Constant(0, 2), rwds_out)),
         )
 
+        self.submodules.fsm = fsm = FSM(reset_state="WAIT-CMD-DATA")
+
         self.sync += If(sr_out_load,
             sr_out.eq(sink.data << (len(sink.data) - sink.len)),
             rwds_out.eq(sink.rwds << (len(sink.rwds) - (sink.len >> 3))),
             last.eq(sink.last),
             mask.eq(sink.mask),
             rwds_en.eq(sink.rwds_en),
+        
+        # Tri-state outputs when IDLE
+        ).Elif(fsm.ongoing("WAIT-CMD-DATA"),
+            mask.eq(0),
+            rwds_en.eq(0),
         )
 
         # Data In Shift.
@@ -174,8 +166,7 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
             sink.ready.eq(sr_out_load),
         ]
 
-        # FSM.
-        self.submodules.fsm = fsm = FSM(reset_state="WAIT-CMD-DATA")
+        # FSM
         fsm.act("WAIT-CMD-DATA",
             # Stop Clk.
             NextValue(clk_en, 0),
@@ -252,5 +243,6 @@ class HyperBusDDRPHYCore(Module, AutoCSR, AutoDoc):
                 )
             ),
         )
+
         self.comb += source.data.eq(sr_in)
 
