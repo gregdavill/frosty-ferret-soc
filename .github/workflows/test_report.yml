@@ -16,5 +16,5 @@ jobs:
       with:
         artifact: cocotb-results            # artifact name
         name: cocotb tests                  # Name of the check run which will be created
-        path: '*.xml'                     # Path to test results (inside artifact .zip)
-        reporter: jest-junit              # Format of test results
+        path: '*.xml'                       # Path to test results (inside artifact .zip)
+        reporter: java-junit                # Format of test results
