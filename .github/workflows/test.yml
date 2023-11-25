@@ -41,5 +41,11 @@ jobs:
     - name: cocotb-test
       working-directory: verif/sim
       run: make
+    
+    - uses: actions/upload-artifact@v3  # upload test results
+      if: success() || failure()        # run this step even if previous step failed
+      with:
+          name: cocotb-results
+          path: verif/sim/results.xml
         
     
