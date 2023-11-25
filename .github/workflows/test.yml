@@ -24,10 +24,10 @@ jobs:
 
     - name: configure python
       run: |
-        python3 -m pip install setuptools
-        python3 -m pip install wheel
-        python3 -m pip install Sphinx 
-        python3 -m pip install sphinxcontrib-wavedrom 
+        python3 -m pip install --upgrade pip
+        python3 -m pip install --upgrade setuptools
+        python3 -m pip install --upgrade wheel
+        python3 -m pip install Sphinx sphinxcontrib-wavedrom
 
     - name: Litex sim build
       run: |
