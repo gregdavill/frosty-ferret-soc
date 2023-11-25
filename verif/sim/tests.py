@@ -155,3 +155,12 @@ async def test_hyperbus_csr_c(dut):
     harness.init_sram("test_hyperbus_csr_c")
     await harness.reset()
     await harness.wfi()
+
+@cocotb.test()
+async def test_spi_exec_hyperbus(dut):
+    """Test C firmware SPI boot, load function in Hyperram, and exec"""
+    harness = SoCTestHarness(dut)
+    harness.build_fw("test_spi_exec_hyperbus")
+    harness.init_spiflash("test_spi_exec_hyperbus")
+    await harness.reset()
+    await harness.wfi()
