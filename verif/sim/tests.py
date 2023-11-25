@@ -125,27 +125,27 @@ class SoCTestHarness:
 
 
 @cocotb.test()
-def test_spi_boot(dut):
+async def test_spi_boot(dut):
     """Test SPI boot on POR"""
     harness = SoCTestHarness(dut)
     harness.build_fw("test_spi_boot")
     harness.init_spiflash("test_spi_boot")
-    yield harness.reset()
-    yield harness.wfi()
+    await harness.reset()
+    await harness.wfi()
 
 
 @cocotb.test()
-def test_spi_boot_c(dut):
+async def test_spi_boot_c(dut):
     """Test C firmware SPI boot into main"""
     harness = SoCTestHarness(dut)
     harness.build_fw("test_spi_boot_c")
     harness.init_spiflash("test_spi_boot_c")
-    yield harness.reset()
-    yield harness.wfi()
+    await harness.reset()
+    await harness.wfi()
 
 
 @cocotb.test()
-def test_hyperbus_csr_c(dut):
+async def test_hyperbus_csr_c(dut):
     """Test C firmware to use CSR access to hyperbus"""
     harness = SoCTestHarness(dut)
     harness.build_fw("jump_to_sram")
@@ -153,5 +153,5 @@ def test_hyperbus_csr_c(dut):
 
     harness.build_fw("test_hyperbus_csr_c")
     harness.init_sram("test_hyperbus_csr_c")
-    yield harness.reset()
-    yield harness.wfi()
+    await harness.reset()
+    await harness.wfi()
