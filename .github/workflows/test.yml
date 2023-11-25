@@ -12,7 +12,10 @@ jobs:
         submodules: true
 
     - name: YosysHQ setup
-      uses: YosysHQ/setup-oss-cad-suite@v1
+      uses: YosysHQ/setup-oss-cad-suite@v2
+      with:
+        version: '2023-11-20'
+        python-override: true
       
     - name: RISC-V GNU setup
       uses: gregdavill/setup-riscv-gnu-toolchain@v2
